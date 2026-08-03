@@ -2,9 +2,19 @@
   "name": "wedding-invitation",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://tobiandayo26.com",
   "scripts": {
     "start": "npx http-server . -c-1 -p 8080",
-    "deploy": "npx gh-pages -d ."
+    "server": "node server.js",
+    "deploy": "npx gh-pages -d .",
+    "save-link": "node ./scripts/save-deploy-link.js",
+    "deploy:link": "npm run deploy && npm run save-link"
+  },
+  "dependencies": {
+    "dotenv": "^16.1.4",
+    "express": "^4.18.4",
+    "nodemailer": "^6.9.5",
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
     "gh-pages": "^5.0.0",

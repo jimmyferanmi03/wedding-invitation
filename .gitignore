@@ -1,3 +1,8 @@
 node_modules/
+.env
+.vscode/
+rsvp.db
 .DS_Store
 npm-debug.log*
+
+deployment-link.txt

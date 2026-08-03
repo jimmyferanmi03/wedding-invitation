@@ -37,10 +37,14 @@ You can also deploy from your machine using the `gh-pages` package:
 
 ```bash
 npm install
-npm run deploy
+npm run deploy:link
 ```
 
 This publishes the site to the `gh-pages` branch of the current repository.
+
+<!-- DEPLOY_LINK_START -->
+**Live site:** _Not yet deployed_
+<!-- DEPLOY_LINK_END -->
 
 ## Notes
 
@@ -54,5 +58,23 @@ Just deploy the folder contents and make sure `index.html` is the entrypoint.
 
 ## Notes
 
-- The invitation is fully static and does not require a backend.
-- RSVP submissions are handled in-browser only and are not stored.
+- The invitation can optionally run with a backend server for RSVP storage and admin notifications.
+- RSVP submissions are saved to a local SQLite database and can be emailed to admin addresses when configured.
+
+## Backend Setup
+
+1. Copy `.env.example` to `.env`.
+2. Update `ADMIN_EMAILS` with the email addresses you want to notify when a guest submits the form. Separate multiple emails with commas.
+3. Update `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM` with valid SMTP credentials.
+4. Set `SEND_USER_CONFIRMATION=true` to send a confirmation email to the guest after they submit the RSVP.
+5. Run `npm install`.
+6. Start the backend with `npm run server`.
+
+The backend serves the static site and handles RSVP form submissions at `/api/rsvp`.
+
+If you want the site to use a custom domain, add a `CNAME` file with the domain name and configure DNS for that domain.
+
+### What gets notified
+
+- Admins listed in `ADMIN_EMAILS` receive a new RSVP notification email.
+- The guest providing their email address receives a confirmation email when `SEND_USER_CONFIRMATION=true`.

@@ -20,3 +20,10 @@ jobs:
         run: npm run deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save deployment link
+        run: npm run save-link
+      - name: Upload deployment link artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-link
+          path: deployment-link.txt

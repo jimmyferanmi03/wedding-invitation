@@ -835,11 +835,11 @@
     </div>
     <div class="prog-row">
       <div class="prog-time">11:00 AM</div>
-      <div><div class="prog-title">Church Wedding</div><div class="prog-sub">Exchange of vows</div></div>
+      <div><div class="prog-title">Church Wedding</div><div class="prog-sub">Exchange of vows, peculiar priests assembly, fafunwa ipaja lagos</div></div>
     </div>
     <div class="prog-row">
       <div class="prog-time">1:00 PM</div>
-      <div><div class="prog-title">Traditional Wedding</div><div class="prog-sub">Cultural rites &amp; introduction of families, White Dove Event Center</div></div>
+      <div><div class="prog-title">Traditional Wedding</div><div class="prog-sub">Cultural rites &amp; introduction of families, White Dove Event Center </div></div>
     </div>
     <div class="prog-row">
       <div class="prog-time">Immediately After</div>
@@ -965,6 +965,11 @@
       </div>
 
       <div class="field">
+        <label for="guestEmail">Email Address</label>
+        <input type="email" id="guestEmail" placeholder="you@example.com" required>
+      </div>
+
+      <div class="field">
         <label>Will you be attending?</label>
         <div class="attend-toggle">
           <button type="button" class="att-btn active" data-val="yes">Joyfully Accept</button>
@@ -983,9 +988,8 @@
         <label for="mealPref">Meal Preference</label>
         <select id="mealPref">
           <option>No preference</option>
-          <option>Vegetarian</option>
-          <option>Vegan</option>
-          <option>Gluten-free</option>
+          <option>I Eat Everything</option>
+          <option>I am vegan </option>
         </select>
       </div>
 
@@ -1014,10 +1018,17 @@
   </div>
   <div class="reveal">
     <div class="venue-name display">White Dove Event Center</div>
-    <div class="venue-addr">Church, traditional wedding &amp; reception all take place here — full address to follow</div>
-    <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=White+Dove+Event+Center" target="_blank" rel="noopener">
-      Get Directions
-    </a>
+    <div class="venue-addr">Bus stop, P&amp;T Estate, Along Ipaja Rd, Boys Town St, Ipaja, Lagos 102213, Lagos</div>
+    <div class="venue-name display" style="margin-top:1.8rem;">Peculiar Priest Assembly</div>
+    <div class="venue-addr">7-13 Fasela Street, Fafunwa Bus stop, Command-Ipaja Road, Lagos, Nigeria</div>
+    <div class="map-links" style="display:flex; flex-wrap:wrap; gap:0.9rem; justify-content:center; margin-top:1.6rem;">
+      <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=Bus+stop+P%26T+Estate+Along+Ipaja+Rd+Boys+Town+St+Ipaja+Lagos+102213+Lagos" target="_blank" rel="noopener">
+        Event Center Directions
+      </a>
+      <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=Peculiar+Priest+Assembly+7-13+Fasela+Street+Fafunwa+Bus+stop+Command-Ipaja+Road+Lagos+Nigeria" target="_blank" rel="noopener">
+        Peculiar Priest Assembly Directions
+      </a>
+    </div>
   </div>
 </section>
 
@@ -1085,21 +1096,39 @@
     });
   });
 
-  // ---- RSVP submit (in-memory only, no backend) ----
+  // ---- RSVP submit (backend) ----
   const rsvpForm = document.getElementById('rsvpForm');
   const rsvpSuccess = document.getElementById('rsvpSuccess');
   const successText = document.getElementById('successText');
 
-  rsvpForm.addEventListener('submit', (e) => {
+  rsvpForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
     const name = document.getElementById('guestName').value.trim() || 'Friend';
-    if (attending === 'yes'){
-      successText.textContent = `We can't wait to celebrate with you, ${name}. See you on November 14th!`;
-    } else {
-      successText.textContent = `We're sorry you can't make it, ${name} — you'll be missed and toasted to.`;
+    const email = document.getElementById('guestEmail').value.trim();
+    const guestCount = document.getElementById('guestCount').value;
+    const mealPref = document.getElementById('mealPref').value;
+    const message = document.getElementById('msgBox').value.trim();
+
+    try {
+      const response = await fetch('/api/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, attending, guestCount, mealPref, message }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Unable to submit RSVP');
+
+      successText.textContent = attending === 'yes'
+        ? `We can't wait to celebrate with you, ${name}. See you on November 14th!`
+        : `We're sorry you can't make it, ${name} — you'll be missed and toasted to.`;
+
+      rsvpForm.classList.add('hide');
+      rsvpSuccess.classList.add('show');
+    } catch (error) {
+      alert(`Unable to send RSVP. ${error.message}`);
     }
-    rsvpForm.classList.add('hide');
-    rsvpSuccess.classList.add('show');
   });
 </script>
 
