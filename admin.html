@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wedding Invitation Admin</title>
+<style>
+  :root {
+    font-family: system-ui, sans-serif;
+    color: #111;
+    background: #f7f4ef;
+  }
+  body {
+    margin: 0;
+    padding: 1.5rem;
+  }
+  h1, h2 {
+    margin: 0 0 0.5rem;
+  }
+  .panel {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 1.4rem;
+    max-width: 960px;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.06);
+  }
+  label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+    color: #555;
+  }
+  textarea,
+  input,
+  button {
+    width: 100%;
+    font: inherit;
+  }
+  textarea {
+    min-height: 96px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 0.9rem;
+    resize: vertical;
+  }
+  button {
+    margin-top: 0.9rem;
+    border: none;
+    border-radius: 8px;
+    padding: 0.95rem 1rem;
+    background: #4c3e32;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #392c23;
+  }
+  .note {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.4rem;
+  }
+  .status {
+    margin-top: 0.9rem;
+    font-size: 0.95rem;
+  }
+  .rsvp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+  }
+  .rsvp-table th,
+  .rsvp-table td {
+    border: 1px solid #ddd;
+    padding: 0.8rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .rsvp-table th {
+    background: #faf5ec;
+  }
+  .footer {
+    text-align: center;
+    margin-top: 1rem;
+    color: #666;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1>Wedding RSVP Admin</h1>
+    <p class="note">Use this page to update admin notification emails and review RSVP submissions.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Notification recipients</h2>
+    <label for="adminEmails">Admin emails (comma-separated)</label>
+    <textarea id="adminEmails" placeholder="admin@example.com, other@example.com"></textarea>
+    <button id="saveEmails">Save admin emails</button>
+    <div id="adminStatus" class="status"></div>
+  </div>
+
+  <div class="panel">
+    <h2>RSVP submissions</h2>
+    <div id="rsvpCount" class="note"></div>
+    <table class="rsvp-table" id="rsvpTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Attending</th>
+          <th>Guests</th>
+          <th>Meal</th>
+          <th>Message</th>
+          <th>Received</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="footer">Open this page at <strong>/admin.html</strong> when the server is running.</div>
+
+  <script>
+    const adminEmailsInput = document.getElementById('adminEmails');
+    const saveButton = document.getElementById('saveEmails');
+    const adminStatus = document.getElementById('adminStatus');
+    const rsvpCount = document.getElementById('rsvpCount');
+    const rsvpTableBody = document.querySelector('#rsvpTable tbody');
+
+    async function fetchAdminEmails() {
+      const res = await fetch('/api/admin/emails');
+      if (!res.ok) throw new Error('Could not load admin emails');
+      const data = await res.json();
+      adminEmailsInput.value = data.emails.join(', ');
+    }
+
+    async function fetchRsvps() {
+      const res = await fetch('/api/rsvps');
+      if (!res.ok) throw new Error('Could not load RSVP submissions');
+      const data = await res.json();
+      rsvpCount.textContent = `${data.length} submission(s) found.`;
+      rsvpTableBody.innerHTML = data.map((item) => `
+        <tr>
+          <td>${item.name}</td>
+          <td>${item.email}</td>
+          <td>${item.attending}</td>
+          <td>${item.guest_count}</td>
+          <td>${item.meal_pref}</td>
+          <td>${item.message || '—'}</td>
+          <td>${new Date(item.received_at).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    saveButton.addEventListener('click', async () => {
+      const emails = adminEmailsInput.value.trim();
+      try {
+        const res = await fetch('/api/admin/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ emails }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to save admin emails');
+        adminStatus.textContent = 'Admin emails saved successfully.';
+        adminStatus.style.color = '#176e37';
+      } catch (err) {
+        adminStatus.textContent = err.message;
+        adminStatus.style.color = '#a12d2d';
+      }
+    });
+
+    async function init() {
+      try {
+        await fetchAdminEmails();
+        await fetchRsvps();
+      } catch (err) {
+        adminStatus.textContent = err.message;
+        adminStatus.style.color = '#a12d2d';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
