@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Oluwatobi & Ayodeji wedding invitation card</title>
 <meta property="og:title" content="Oluwatobi & Ayodeji wedding invitation card">
+  <!-- Set this to your backend API base (e.g. https://api.example.com) when deploying the server separately -->
+  <meta name="api-base" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&family=Meddon&display=swap" rel="stylesheet">
@@ -1097,6 +1099,8 @@
   });
 
   // ---- RSVP submit (backend) ----
+  // API base can be configured via the <meta name="api-base"> tag above.
+  const API_BASE = (document.querySelector('meta[name="api-base"]') || {}).content || window.location.origin;
   const rsvpForm = document.getElementById('rsvpForm');
   const rsvpSuccess = document.getElementById('rsvpSuccess');
   const successText = document.getElementById('successText');
@@ -1111,7 +1115,7 @@
     const message = document.getElementById('msgBox').value.trim();
 
     try {
-      const response = await fetch('/api/rsvp', {
+      const response = await fetch(`${API_BASE}/api/rsvp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, attending, guestCount, mealPref, message }),
