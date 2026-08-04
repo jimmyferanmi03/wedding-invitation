@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npx http-server . -c-1 -p 8080",
     "server": "node server.js",
+    "server:dev": "PORT=3001 node server.js",
     "deploy": "npx gh-pages -d .",
     "save-link": "node ./scripts/save-deploy-link.js",
     "deploy:link": "npm run deploy && npm run save-link"

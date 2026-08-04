@@ -271,5 +271,5 @@ app.listen(PORT, () => {
   console.log(`Wedding invitation server listening on http://localhost:${PORT}`);
   if (!transporter) {
     console.warn('Admin notification disabled until SMTP is configured in .env.');
-  }
+  }                                 
 });
