@@ -253,6 +253,45 @@ app.post('/api/admin/emails', async (req, res) => {
   }
 });
 
+// Export all RSVPs as a CSV or JSON backup file.
+app.get('/api/admin/export', (req, res) => {
+  const format = (req.query.format || 'csv').toLowerCase();
+
+  db.all(
+    `SELECT id, name, email, attending, guest_count, meal_pref, message, received_at
+     FROM rsvp_submissions ORDER BY id ASC`,
+    (err, rows) => {
+      if (err) {
+        console.error('Failed to export RSVPs:', err);
+        return res.status(500).json({ error: 'Unable to export RSVPs.' });
+      }
+
+      if (format === 'json') {
+        res.setHeader('Content-Disposition', 'attachment; filename="rsvp-backup.json"');
+        return res.json(rows);
+      }
+
+      const headers = ['id', 'name', 'email', 'attending', 'guest_count', 'meal_pref', 'message', 'received_at'];
+      const escapeCsv = (val) => {
+        const str = val === null || val === undefined ? '' : String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const csvRows = [
+        headers.join(','),
+        ...rows.map((row) => headers.map((h) => escapeCsv(row[h])).join(',')),
+      ];
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="rsvp-backup.csv"');
+      res.send(csvRows.join('\n'));
+    }
+  );
+});
+
 app.get('/api/rsvps', (req, res) => {
   db.all(`SELECT id, name, email, attending, guest_count, meal_pref, message, received_at FROM rsvp_submissions ORDER BY id DESC`, (err, rows) => {
     if (err) {
@@ -271,5 +310,5 @@ app.listen(PORT, () => {
   console.log(`Wedding invitation server listening on http://localhost:${PORT}`);
   if (!transporter) {
     console.warn('Admin notification disabled until SMTP is configured in .env.');
-  }                                 
+  }
 });
