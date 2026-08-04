@@ -16,6 +16,18 @@ Render (recommended):
    - `SEND_USER_CONFIRMATION=true` (optional)
 6. Deploy. The service will provide a public URL like `https://my-backend.onrender.com`.
 
+One-click / manifest deploy (Render):
+
+If you prefer a manifest-driven service creation, `render.yaml` is included in the repository. To create the service from that manifest:
+
+1. Go to Render dashboard -> New -> "Create a new service from a render.yaml file".
+2. Select this repository and follow the prompts. The YAML will create a free web service named `wedding-invitation-backend` that runs `npm run server`.
+3. After creation, open the service's Settings -> Environment to add the SMTP and admin environment variables.
+
+Notes:
+- The `render.yaml` uses the `free` plan; if you need more resources, edit the `plan` field.
+- Do NOT store SMTP credentials in the repo; use the Render dashboard's Environment settings.
+
 Railway quick deploy:
 1. Create a Railway project and link the GitHub repo (or use "Deploy from GitHub").
 2. Set the start command as `npm run server` and the env vars as above.
