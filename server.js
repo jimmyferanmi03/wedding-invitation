@@ -74,6 +74,36 @@ function isValidEmail(email) {
   return typeof email === 'string' && /\S+@\S+\.\S+/.test(email.trim());
 }
 
+// --- Admin authentication (HTTP Basic Auth) ---
+// Protects all /api/admin/* routes and /api/rsvps. Browsers show a native
+// login prompt automatically when these routes are visited directly.
+function requireAdminAuth(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const [scheme, encoded] = authHeader.split(' ');
+
+  if (scheme !== 'Basic' || !encoded) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+    return res.status(401).send('Authentication required.');
+  }
+
+  const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
+  const separatorIndex = decoded.indexOf(':');
+  const user = decoded.slice(0, separatorIndex);
+  const pass = decoded.slice(separatorIndex + 1);
+
+  if (
+    process.env.ADMIN_USER &&
+    process.env.ADMIN_PASSWORD &&
+    user === process.env.ADMIN_USER &&
+    pass === process.env.ADMIN_PASSWORD
+  ) {
+    return next();
+  }
+
+  res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+  return res.status(401).send('Invalid credentials.');
+}
+
 function normalizeEmails(input) {
   if (!input) return [];
   const items = Array.isArray(input) ? input : String(input).split(',');
@@ -242,7 +272,7 @@ app.post('/api/rsvp', async (req, res) => {
   );
 });
 
-app.get('/api/admin/emails', async (req, res) => {
+app.get('/api/admin/emails', requireAdminAuth, async (req, res) => {
   try {
     const emails = await getAdminEmails();
     res.json({ emails });
@@ -252,7 +282,7 @@ app.get('/api/admin/emails', async (req, res) => {
   }
 });
 
-app.post('/api/admin/emails', async (req, res) => {
+app.post('/api/admin/emails', requireAdminAuth, async (req, res) => {
   const { emails } = req.body;
   const cleaned = normalizeEmails(emails);
   if (cleaned.length === 0) {
@@ -269,7 +299,7 @@ app.post('/api/admin/emails', async (req, res) => {
 });
 
 // Export all RSVPs as a CSV or JSON backup file.
-app.get('/api/admin/export', (req, res) => {
+app.get('/api/admin/export', requireAdminAuth, (req, res) => {
   const format = (req.query.format || 'csv').toLowerCase();
 
   db.all(
@@ -307,7 +337,19 @@ app.get('/api/admin/export', (req, res) => {
   );
 });
 
-app.get('/api/rsvps', (req, res) => {
+// Delete a single RSVP by id (e.g. to remove test entries).
+app.delete('/api/admin/rsvp/:id', requireAdminAuth, (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM rsvp_submissions WHERE id = ?', [id], function (err) {
+    if (err) {
+      console.error('Failed to delete RSVP:', err);
+      return res.status(500).json({ error: 'Unable to delete RSVP.' });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+app.get('/api/rsvps', requireAdminAuth, (req, res) => {
   db.all(`SELECT id, name, email, attending, guest_count, meal_pref, message, received_at FROM rsvp_submissions ORDER BY id DESC`, (err, rows) => {
     if (err) {
       console.error('Failed to fetch RSVP submissions:', err);
@@ -325,5 +367,8 @@ app.listen(PORT, () => {
   console.log(`Wedding invitation server listening on http://localhost:${PORT}`);
   if (!BREVO_API_KEY) {
     console.warn('Admin notification disabled until BREVO_API_KEY is configured.');
+  }
+  if (!process.env.ADMIN_USER || !process.env.ADMIN_PASSWORD) {
+    console.warn('Admin routes are unprotected until ADMIN_USER and ADMIN_PASSWORD are configured.');
   }
 });
