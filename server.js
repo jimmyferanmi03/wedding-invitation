@@ -1,7 +1,6 @@
 const path = require('path');
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -61,21 +60,15 @@ const defaultAdminEmails = process.env.ADMIN_EMAILS
   ? process.env.ADMIN_EMAILS.split(',').map((email) => email.trim()).filter(Boolean)
   : [];
 
-const smtpConfig = process.env.SMTP_HOST
-  ? {
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: process.env.SMTP_USER
-        ? {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          }
-        : undefined,
-    }
-  : null;
+// --- Brevo (HTTP API) email setup ---
+// Using Brevo's HTTP API instead of SMTP because most free-tier hosts
+// (Render included) block outbound SMTP ports 25/465/587. Regular HTTPS
+// requests are not affected, so this works reliably on free hosting.
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
-const transporter = smtpConfig ? nodemailer.createTransport(smtpConfig) : null;
+const senderEmail = process.env.EMAIL_FROM || 'no-reply@wedding-invite.local';
+const senderName = process.env.EMAIL_FROM_NAME || "Oluwatobi & Ayodeji's Wedding";
 
 function isValidEmail(email) {
   return typeof email === 'string' && /\S+@\S+\.\S+/.test(email.trim());
@@ -122,22 +115,46 @@ async function getAdminEmails() {
   return defaultAdminEmails;
 }
 
-async function sendMail(options) {
-  if (!transporter) {
-    throw new Error('SMTP is not configured.');
+// Sends an email via Brevo's HTTP API.
+async function sendMail({ to, subject, text, html }) {
+  if (!BREVO_API_KEY) {
+    throw new Error('Brevo is not configured (missing BREVO_API_KEY).');
   }
-  return transporter.sendMail(options);
+
+  const toList = (Array.isArray(to) ? to : [to]).map((email) => ({ email }));
+
+  const response = await fetch(BREVO_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'api-key': BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: { email: senderEmail, name: senderName },
+      to: toList,
+      subject,
+      textContent: text,
+      htmlContent: html,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    throw new Error(`Brevo API error (${response.status}): ${errorBody}`);
+  }
+
+  return response.json();
 }
 
 async function notifyAdmins(submission) {
   const adminEmails = await getAdminEmails();
-  if (!transporter || adminEmails.length === 0) {
-    console.warn('Admin notification skipped: SMTP or admin emails are not configured.');
+  if (!BREVO_API_KEY || adminEmails.length === 0) {
+    console.warn('Admin notification skipped: Brevo or admin emails are not configured.');
     return;
   }
 
-  const mailOptions = {
-    from: process.env.EMAIL_FROM || process.env.SMTP_USER || 'no-reply@wedding-invite.local',
+  await sendMail({
     to: adminEmails,
     subject: `New RSVP from ${submission.name}`,
     text: `New RSVP received:\n\nName: ${submission.name}\nEmail: ${submission.email}\nAttending: ${submission.attending}\nGuests: ${submission.guest_count}\nMeal: ${submission.meal_pref}\nMessage: ${submission.message || 'None'}\nReceived: ${submission.received_at}`,
@@ -151,18 +168,15 @@ async function notifyAdmins(submission) {
       <p><strong>Message:</strong> ${submission.message ? submission.message.replace(/\n/g, '<br>') : 'None'}</p>
       <p><strong>Received:</strong> ${submission.received_at}</p>
     `,
-  };
-
-  await sendMail(mailOptions);
+  });
 }
 
 async function notifyGuest(submission) {
-  if (!transporter || process.env.SEND_USER_CONFIRMATION !== 'true' || !isValidEmail(submission.email)) {
+  if (!BREVO_API_KEY || process.env.SEND_USER_CONFIRMATION !== 'true' || !isValidEmail(submission.email)) {
     return false;
   }
 
-  const mailOptions = {
-    from: process.env.EMAIL_FROM || process.env.SMTP_USER || 'no-reply@wedding-invite.local',
+  await sendMail({
     to: submission.email,
     subject: `Your RSVP for Oluwatobi & Ayodeji's wedding`,
     text: `Thank you for your RSVP, ${submission.name}!\n\nWe have received the following details:\nAttending: ${submission.attending}\nGuests: ${submission.guest_count}\nMeal preference: ${submission.meal_pref}\nMessage: ${submission.message || 'None'}\n\nWe look forward to celebrating with you on November 14, 2026.`,
@@ -178,9 +192,7 @@ async function notifyGuest(submission) {
       </ul>
       <p>We look forward to celebrating with you on November 14, 2026.</p>
     `,
-  };
-
-  await sendMail(mailOptions);
+  });
   return true;
 }
 
@@ -221,7 +233,10 @@ app.post('/api/rsvp', async (req, res) => {
         res.json({ success: true });
       } catch (notifyError) {
         console.error('Failed to send notification:', notifyError);
-        res.status(500).json({ error: 'RSVP saved, but notification failed.' });
+        // The RSVP itself was already saved successfully at this point —
+        // only the email failed, so we still tell the guest it worked but
+        // flag the email issue so the admin notices it in the logs.
+        res.json({ success: true, emailWarning: 'RSVP saved, but the notification email could not be sent.' });
       }
     }
   );
@@ -308,7 +323,7 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Wedding invitation server listening on http://localhost:${PORT}`);
-  if (!transporter) {
-    console.warn('Admin notification disabled until SMTP is configured in .env.');
+  if (!BREVO_API_KEY) {
+    console.warn('Admin notification disabled until BREVO_API_KEY is configured.');
   }
 });
