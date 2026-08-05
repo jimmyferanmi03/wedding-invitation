@@ -87,12 +87,63 @@
     color: #666;
     font-size: 0.9rem;
   }
+
+  /* --- New: summary + export/delete styles --- */
+  .summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin: 0.9rem 0;
+  }
+  .summary-card {
+    flex: 1 1 140px;
+    background: #faf5ec;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+  }
+  .summary-card .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .summary-card .label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.2rem;
+  }
+  .export-link {
+    display: inline-block;
+    width: auto;
+    text-decoration: none;
+    margin-top: 0.9rem;
+    border: none;
+    border-radius: 8px;
+    padding: 0.85rem 1.2rem;
+    background: #4c3e32;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .export-link:hover {
+    background: #392c23;
+  }
+  .delete-btn {
+    width: auto;
+    background: #a12d2d;
+    padding: 0.5rem 0.8rem;
+    margin-top: 0;
+    font-size: 0.85rem;
+  }
+  .delete-btn:hover {
+    background: #7c2222;
+  }
 </style>
 </head>
 <body>
   <div class="panel">
     <h1>Wedding RSVP Admin</h1>
-    <p class="note">Use this page to update admin notification emails and review RSVP submissions.</p>
+    <p class="note">Use this page to update admin notification emails, review RSVP submissions, and download a backup guest list.</p>
   </div>
 
   <div class="panel">
@@ -101,6 +152,28 @@
     <textarea id="adminEmails" placeholder="admin@example.com, other@example.com"></textarea>
     <button id="saveEmails">Save admin emails</button>
     <div id="adminStatus" class="status"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Guest list summary</h2>
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="value" id="summaryTotal">—</div>
+        <div class="label">Total RSVPs</div>
+      </div>
+      <div class="summary-card">
+        <div class="value" id="summaryAttending">—</div>
+        <div class="label">Attending</div>
+      </div>
+      <div class="summary-card">
+        <div class="value" id="summaryGuests">—</div>
+        <div class="label">Total guests (incl. plus-ones)</div>
+      </div>
+    </div>
+    <a class="export-link" href="/api/admin/export?format=csv" download>
+      📥 Download guest list (CSV)
+    </a>
+    <p class="note">Tip: download a fresh copy every few days to keep a saved backup of your guest list.</p>
   </div>
 
   <div class="panel">
@@ -116,6 +189,7 @@
           <th>Meal</th>
           <th>Message</th>
           <th>Received</th>
+          <th></th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -130,6 +204,9 @@
     const adminStatus = document.getElementById('adminStatus');
     const rsvpCount = document.getElementById('rsvpCount');
     const rsvpTableBody = document.querySelector('#rsvpTable tbody');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const summaryAttending = document.getElementById('summaryAttending');
+    const summaryGuests = document.getElementById('summaryGuests');
 
     async function fetchAdminEmails() {
       const res = await fetch('/api/admin/emails');
@@ -138,11 +215,35 @@
       adminEmailsInput.value = data.emails.join(', ');
     }
 
+    function renderSummary(data) {
+      const attending = data.filter((item) => String(item.attending).toLowerCase().startsWith('y'));
+      const totalGuests = attending.reduce((sum, item) => sum + (Number(item.guest_count) || 0), 0);
+
+      summaryTotal.textContent = data.length;
+      summaryAttending.textContent = attending.length;
+      summaryGuests.textContent = totalGuests;
+    }
+
+    async function deleteRsvp(id) {
+      if (!confirm('Remove this RSVP entry? This cannot be undone.')) return;
+      try {
+        const res = await fetch(`/api/admin/rsvp/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to delete RSVP');
+        await fetchRsvps();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
     async function fetchRsvps() {
       const res = await fetch('/api/rsvps');
       if (!res.ok) throw new Error('Could not load RSVP submissions');
       const data = await res.json();
+
       rsvpCount.textContent = `${data.length} submission(s) found.`;
+      renderSummary(data);
+
       rsvpTableBody.innerHTML = data.map((item) => `
         <tr>
           <td>${item.name}</td>
@@ -152,8 +253,13 @@
           <td>${item.meal_pref}</td>
           <td>${item.message || '—'}</td>
           <td>${new Date(item.received_at).toLocaleString()}</td>
+          <td><button class="delete-btn" data-id="${item.id}">Delete</button></td>
         </tr>
       `).join('');
+
+      rsvpTableBody.querySelectorAll('.delete-btn').forEach((btn) => {
+        btn.addEventListener('click', () => deleteRsvp(btn.dataset.id));
+      });
     }
 
     saveButton.addEventListener('click', async () => {
