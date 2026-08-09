@@ -6,9 +6,9 @@
 <title>Oluwatobi & Ayodeji wedding invitation card</title>
 <meta property="og:title" content="Oluwatobi & Ayodeji wedding invitation card">
 <meta property="og:description" content="You're invited to celebrate the wedding of Oluwatobi & Ayodeji on 14th November 2026.">
-<meta property="og:image" content="https://meetingtheadeyemis2026.onrender.com/couple-photo2.jpg.jpeg">
-<meta name="twitter:image" content="https://meetingtheadeyemis2026.onrender.com/couple-photo2.jpg.jpeg">
-<link rel="image_src" href="https://meetingtheadeyemis2026.onrender.com/couple-photo2.jpg.jpeg">
+<meta property="og:image" content="https://meetingtheadeyemis2026.onrender.com/couple-photo.jpg.jpeg">
+<meta name="twitter:image" content="https://meetingtheadeyemis2026.onrender.com/couple-photo.jpg.jpeg">
+<link rel="image_src" href="https://meetingtheadeyemis2026.onrender.com/couple-photo.jpg.jpeg">
 <meta property="og:url" content="https://meetingtheadeyemis2026.onrender.com">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -186,7 +186,8 @@
   .cover-content.photo-visible .couple-photo{
     opacity:1; max-height:360px; pointer-events:auto;
   }
-  .couple-photo img{ display:block; width:100%; height:auto; object-fit:cover; }
+  .couple-photo img{ display:block; width:100%; height:auto; object-fit:cover; opacity:0; transition: opacity .7s ease; }
+  .cover-content.photo-visible .couple-photo img{ opacity:1; }
   .photo-placeholder{
     padding:1.2rem; text-align:center; color:var(--text-dim); font-size:0.9rem;
   }
@@ -598,7 +599,7 @@
     <div class="cover-names">Oluwatobi &amp; Ayodeji</div>
 
     <div class="couple-photo" id="couplePhotoPreview">
-      <div class="photo-placeholder">Your couple photo will appear here when a file is present in the site folder.</div>
+      <div class="photo-placeholder">Your couple photo will appear here when you open the envelope.</div>
     </div>
 
     <div class="env-frame" id="envFrame" role="button" aria-label="Open your invitation" tabindex="0">
@@ -872,7 +873,7 @@
   const coverContent = document.querySelector('.cover-content');
   const starFall = document.querySelector('.star-fall');
   const musicCandidates = ['music.mp3', 'assets/music.mp3', 'audio/music.mp3', 'sounds/music.mp3'];
-  const photoCandidates = ['couple-photo2.jpg.jpeg', 'couple-photo.jpg', 'couple-photo.jpg.jpeg', 'couple-photo.png', 'couple.jpg', 'couple.png', 'photo.jpg', 'photo.png', 'assets/couple-photo.jpg', 'assets/couple-photo.png'];
+  const photoCandidates = ['couple-photo.jpg.jpeg', './couple-photo.jpg.jpeg', '/couple-photo.jpg.jpeg', 'couple-photo2.jpg.jpeg', './couple-photo2.jpg.jpeg', '/couple-photo2.jpg.jpeg', 'couple-photo.jpg', 'couple-photo.png', 'couple.jpg', 'couple.png', 'photo.jpg', 'photo.png', 'assets/couple-photo.jpg', 'assets/couple-photo.png'];
   async function loadPreferredMusic(){
     for (const candidate of musicCandidates) {
       try {
@@ -914,7 +915,14 @@
   }
 
   async function setCouplePhoto(src) {
-    couplePhotoPreview.innerHTML = `<img src="${src}" alt="Couple photo">`;
+    couplePhotoPreview.innerHTML = '';
+    const img = document.createElement('img');
+    img.alt = 'Couple photo';
+    img.src = src;
+    img.onload = () => {
+      img.style.opacity = '1';
+    };
+    couplePhotoPreview.appendChild(img);
   }
 
   function loadImageCandidate(candidate) {
@@ -936,6 +944,11 @@
     }
     couplePhotoPreview.innerHTML = '<div class="photo-placeholder">Place a photo file in the site folder.</div>';
     return false;
+  }
+
+  function showEnvelopePhoto() {
+    const chosenPhoto = 'couple-photo.jpg.jpeg';
+    setCouplePhoto(chosenPhoto);
   }
 
   function createGoldenStar(){
@@ -974,6 +987,7 @@
     startMusic();
     if (coverContent) {
       coverContent.classList.add('photo-visible');
+      showEnvelopePhoto();
     }
     setTimeout(() => {
       envScreen.classList.add('hidden');
