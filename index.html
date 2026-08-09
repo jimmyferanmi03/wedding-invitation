@@ -942,16 +942,20 @@
     if (!starFall) return;
     const span = document.createElement('span');
     const left = Math.random() * 100;
-    const dur = 2.8 + Math.random() * 2.4;
-    const wobble = (Math.random() - 0.5) * 80;
+    const dur = 2.6 + Math.random() * 2.8;
+    const wobble = (Math.random() - 0.5) * 120;
+    const size = 8 + Math.random() * 12;
     span.style.left = `${left}vw`;
+    span.style.width = `${size}px`;
+    span.style.height = `${size}px`;
     span.style.setProperty('--star-dur', `${dur}s`);
     span.style.setProperty('--star-wobble', `${wobble}px`);
+    span.style.opacity = 0;
     starFall.appendChild(span);
-    setTimeout(() => span.remove(), dur * 1000 + 200);
+    setTimeout(() => span.remove(), dur * 1000 + 300);
   }
 
-  setInterval(createGoldenStar, 420);
+  setInterval(createGoldenStar, 220);
 
   musicToggle.addEventListener('click', (e) => {
     e.preventDefault();
