@@ -11,18 +11,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&family=Meddon&family=Great+Vibes&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* ---- Soft romantic palette ---- */
-    --bg:#FAF8F5;
-    --bg-soft:#FFFDFC;
-    --blush:#F8F1F3;
-    --text:#5B4B4A;
-    --text-dim:#8C7A79;
-    --rose:#7D1329;
-    --pink-soft:#E8C7CE;
-    --sage:#A9B7A3;
-    --champagne:#D9C3A5;
-    --line: rgba(201,138,152,0.22);
-    --card-shadow: 0 30px 70px rgba(91,75,74,0.12);
+    /* ---- Burgundy & Cream evening palette ---- */
+    --bg:#FCF3E8;
+    --bg-soft:#FFFDF8;
+    --blush:#F7E7D8;
+    --text:#4E2330;
+    --text-dim:#7A4C58;
+    --rose:#7A1F3D;
+    --pink-soft:#E9CFCF;
+    --sage:#8B6A4A;
+    --champagne:#D8B178;
+    --line: rgba(122,31,61,0.18);
+    --card-shadow: 0 30px 70px rgba(78,35,48,0.12);
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
@@ -40,15 +40,15 @@
   .bg-layer{ position:fixed; inset:0; z-index:-3; pointer-events:none; }
   .bg-glow{
     background:
-      radial-gradient(900px 640px at 10% 0%, rgba(242,214,222,0.55), transparent 55%),
-      radial-gradient(900px 640px at 92% 8%, rgba(169,183,163,0.28), transparent 55%),
-      radial-gradient(1000px 700px at 15% 90%, rgba(217,195,165,0.28), transparent 55%),
-      radial-gradient(1000px 700px at 90% 95%, rgba(201,138,152,0.18), transparent 55%),
+      radial-gradient(900px 640px at 10% 0%, rgba(233,207,207,0.6), transparent 55%),
+      radial-gradient(900px 640px at 92% 8%, rgba(216,177,120,0.28), transparent 55%),
+      radial-gradient(1000px 700px at 15% 90%, rgba(216,177,120,0.24), transparent 55%),
+      radial-gradient(1000px 700px at 90% 95%, rgba(122,31,61,0.16), transparent 55%),
       linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 50%, var(--blush) 100%);
   }
-  .bg-grain{ opacity:0.03; mix-blend-mode:multiply; }
+  .bg-grain{ opacity:0.04; mix-blend-mode:multiply; }
   .bg-grain svg{ width:100%; height:100%; }
-  .bg-vignette{ background: radial-gradient(120% 90% at 50% 10%, transparent 60%, rgba(201,138,152,0.06) 100%); }
+  .bg-vignette{ background: radial-gradient(120% 90% at 50% 10%, transparent 60%, rgba(122,31,61,0.08) 100%); }
 
   .gold-frame{
     position:fixed; inset:14px; z-index:2; pointer-events:none;
@@ -89,9 +89,9 @@
     position:fixed; inset:0; z-index:100;
     display:flex; align-items:center; justify-content:center;
     background:
-      radial-gradient(1000px 700px at 50% 0%, rgba(242,214,222,0.6), transparent 60%),
-      radial-gradient(900px 700px at 15% 95%, rgba(169,183,163,0.25), transparent 60%),
-      radial-gradient(900px 700px at 85% 95%, rgba(217,195,165,0.25), transparent 60%),
+      radial-gradient(1000px 700px at 50% 0%, rgba(233,207,207,0.65), transparent 60%),
+      radial-gradient(900px 700px at 15% 95%, rgba(216,177,120,0.22), transparent 60%),
+      radial-gradient(900px 700px at 85% 95%, rgba(122,31,61,0.16), transparent 60%),
       var(--bg-soft);
     transition: opacity 1s ease, visibility 1s ease;
     overflow:hidden;
@@ -170,6 +170,20 @@
   .env-card .script{ font-size:1.8rem; color:var(--rose); }
   .env-card small{ letter-spacing:0.25em; text-transform:uppercase; font-size:0.6rem; color:var(--text-dim); }
 
+
+  .couple-photo{
+    width:min(88vw, 280px); margin:1.2rem auto 0; border-radius:16px; overflow:hidden;
+    border:1px solid rgba(122,31,61,0.18); box-shadow:var(--card-shadow); background:var(--bg-soft);
+    opacity:0; max-height:0; pointer-events:none; transition: opacity .6s ease, max-height .6s ease;
+  }
+  .cover-content.photo-visible .couple-photo{
+    opacity:1; max-height:360px; pointer-events:auto;
+  }
+  .couple-photo img{ display:block; width:100%; height:auto; object-fit:cover; }
+  .photo-placeholder{
+    padding:1.2rem; text-align:center; color:var(--text-dim); font-size:0.9rem;
+  }
+
   /* floating petals instead of harsh bubbles — soft & elegant */
   .petals{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:1; }
   .petals span{
@@ -186,6 +200,22 @@
     10%{ opacity:0.55; }
     90%{ opacity:0.35; }
     100%{ transform:translateY(-600px) translateX(24px) rotate(180deg); opacity:0; }
+  }
+
+  .star-fall{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:1; }
+  .star-fall span{
+    position:absolute; top:-10px;
+    width:8px; height:8px;
+    border-radius:50%;
+    background: radial-gradient(circle, rgba(255,243,171,1) 0%, rgba(205,152,30,1) 60%, transparent 100%);
+    box-shadow: 0 0 12px rgba(255,214,95,0.85);
+    opacity:0;
+    animation: fallStar var(--star-dur, 3.8s) ease-in forwards;
+  }
+  @keyframes fallStar{
+    0%{ transform: translateY(0) translateX(0) rotate(0deg) scale(0.35); opacity:0; }
+    10%{ opacity:1; }
+    100%{ transform: translateY(110vh) translateX(var(--star-wobble, 20px)) rotate(720deg) scale(0.8); opacity:0; }
   }
 
   .champagne-icon{ position:absolute; top:4%; left:50%; transform:translateX(-50%); z-index:2; opacity:0.6; pointer-events:none; }
@@ -413,6 +443,22 @@
   }
   .map-btn:hover{ background:var(--rose); color:#fff; }
 
+  .music-controls{
+    position:fixed; right:1rem; bottom:1rem; z-index:120;
+  }
+  .music-toggle{
+    display:inline-flex; align-items:center; justify-content:center; gap:0.6rem;
+    border:none; border-radius:999px; padding:0.7rem 0.95rem;
+    background:rgba(125,19,41,0.92); color:#fff;
+    box-shadow:0 14px 30px rgba(91,75,74,0.2);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: transform .2s ease, background .2s ease;
+    font-size:0.9rem;
+  }
+  .music-toggle:hover{ transform:translateY(-2px); }
+  .music-toggle.paused{ background:rgba(91,75,74,0.9); }
+  .music-icon{ font-size:1rem; }
+
   #gifts p{ color:var(--text-dim); line-height:1.8; font-size:0.95rem; }
 
   footer{ text-align:center; padding:3.6rem 1.5rem 3rem; }
@@ -422,13 +468,37 @@
   h2.section-title{ font-size:clamp(1.9rem, 5vw, 2.5rem); text-align:center; margin-bottom:0.3rem; }
   .section-eyebrow{ text-align:center; display:block; margin-bottom:0.9rem; }
 
+  .palette-section{ text-align:center; }
+  .palette-grid{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1rem; margin-top:2rem; }
+  .palette-card{
+    background:var(--bg-soft); border:1px solid var(--line); border-radius:12px; padding:1rem;
+    box-shadow:var(--card-shadow); display:flex; align-items:center; gap:0.9rem; text-align:left;
+  }
+  .swatch{ width:46px; height:46px; border-radius:50%; flex-shrink:0; border:2px solid rgba(255,255,255,0.7); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); }
+  .swatch-burgundy{ background:#7A1F3D; }
+  .swatch-cream{ background:#FCF3E8; }
+  .swatch-rose{ background:#E9CFCF; }
+  .swatch-gold{ background:#D8B178; }
+  .palette-card strong{ display:block; color:var(--rose); margin-bottom:0.2rem; }
+  .palette-card p{ font-size:0.82rem; color:var(--text-dim); }
+
   @media (max-width:480px){
+    .palette-grid{ grid-template-columns:1fr; }
     .story-item{ grid-template-columns: 60px 1fr; gap:1rem; }
     .prog-row{ grid-template-columns: 66px 1fr; }
   }
 </style>
 </head>
 <body>
+<audio id="backgroundMusic" loop preload="auto">
+  <source id="musicSource" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+</audio>
+<div class="music-controls">
+  <button class="music-toggle" id="musicToggle" type="button" aria-label="Toggle background music">
+    <span class="music-icon" aria-hidden="true">♫</span>
+    <span id="musicLabel">Play Music</span>
+  </button>
+</div>
 
 <svg width="0" height="0" style="position:absolute">
   <defs>
@@ -450,6 +520,7 @@
 <div class="bg-layer bg-glow"></div>
 <div class="bg-layer bg-grain"><svg><filter id="grainFilter"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#grainFilter)"/></svg></div>
 <div class="bg-layer bg-vignette"></div>
+<div class="star-fall" aria-hidden="true"></div>
 <div class="gold-frame"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
 
 <!-- ================= ENVELOPE COVER ================= -->
@@ -517,6 +588,10 @@
     <div class="cover-monogram">O&amp;A</div>
     <div class="cover-eyebrow">The Wedding Of</div>
     <div class="cover-names">Oluwatobi &amp; Ayodeji</div>
+
+    <div class="couple-photo" id="couplePhotoPreview">
+      <div class="photo-placeholder">Your couple photo will appear here when a file is present in the site folder.</div>
+    </div>
 
     <div class="env-frame" id="envFrame" role="button" aria-label="Open your invitation" tabindex="0">
       <div class="env-body"></div>
@@ -597,7 +672,7 @@
           <div class="venue-line">Church — Peculiar Priest Assembly</div>
           <div class="venue-addr-line">7-13 Fasela Street, Fafunwa Bus stop, Command-Ipaja Road, Lagos, Nigeria</div>
           <div class="venue-line">Reception &amp; Traditional — White Dove Event Center</div>
-          <div class="venue-addr-line">Bus stop, P&amp;T Estate, Along Ipaja Rd, Boys Town St, Ipaja, Lagos 102213</div>
+          <div class="venue-addr-line">P&amp;T Estate, Along Ipaja Rd, Boys Town Bus stop, Ipaja, Lagos State Nigeria </div>
           <div class="invite-rsvp-note script">Reception to follow</div>
         </div>
       </div>
@@ -643,8 +718,8 @@
   <div class="reveal" style="max-width:560px; margin:1.6rem auto 0;">
     <div class="script" style="text-align:center; font-size:1.7rem; color:var(--rose); margin-bottom:1.1rem;">Oluwatobi's POV</div>
     <p style="color:var(--text-dim); line-height:1.9; font-size:1rem; text-align:center;">
-      One quiet Sunday in January 2023, while we were doing what we loved most — watching a new action
-      movie on Netflix — he paused our routine to create a moment we'll cherish forever. Holding my hand,
+      One quiet Sunday in January 2023, while we were doing what we loved most watching a new action
+      movie on Netflix he paused our routine to create a moment we'll cherish forever. Holding my hand,
       he went down on one knee and, with tears in his eyes, shared all the reasons he loved me and why he
       believed I was his soulmate. Before he could finish, my heart already knew the answer.
     </p>
@@ -715,7 +790,7 @@
   </div>
   <span class="eyebrow section-eyebrow reveal">Kindly Reply</span>
   <h2 class="section-title reveal">RSVP</h2>
-  <p class="reveal" style="text-align:center; color:var(--text-dim); font-size:0.9rem; margin-bottom:2.2rem;">We'd love to know you're coming — please respond by October 1, 2026.</p>
+  <p class="reveal" style="text-align:center; color:var(--text-dim); font-size:0.9rem; margin-bottom:2.2rem;">We'd love to know you're coming please respond before October 1, 2026.</p>
   <div class="rsvp-card reveal">
     <form class="rsvp-form" id="rsvpForm">
       <div class="field"><label for="guestName">Full Name</label><input type="text" id="guestName" placeholder="Your name" required></div>
@@ -747,12 +822,28 @@
   <div class="divider reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.4"/></svg></div>
   <div class="reveal">
     <div class="venue-name display">White Dove Event Center</div>
-    <div class="venue-addr">Bus stop, P&amp;T Estate, Along Ipaja Rd, Boys Town St, Ipaja, Lagos 102213, Lagos</div>
+    <div class="venue-addr">P&amp;T Estate, Along Ipaja Rd, Boys Town Bus stop, Ipaja,Lagos, Nigeria</div>
     <div class="venue-name display" style="margin-top:1.8rem;">Peculiar Priest Assembly</div>
     <div class="venue-addr">7-13 Fasela Street, Fafunwa Bus stop, Command-Ipaja Road, Lagos, Nigeria</div>
     <div class="map-links" style="display:flex; flex-wrap:wrap; gap:0.9rem; justify-content:center; margin-top:1.6rem;">
       <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=Bus+stop+P%26T+Estate+Along+Ipaja+Rd+Boys+Town+St+Ipaja+Lagos+102213+Lagos" target="_blank" rel="noopener">Event Center Directions</a>
       <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=Peculiar+Priest+Assembly+7-13+Fasela+Street+Fafunwa+Bus+stop+Command-Ipaja+Road+Lagos+Nigeria" target="_blank" rel="noopener">Peculiar Priest Assembly Directions</a>
+    </div>
+  </div>
+</section>
+
+<section class="palette-section" id="palette">
+  <span class="eyebrow section-eyebrow reveal">Colour Palette</span>
+  <h2 class="section-title reveal">The Evening Colours</h2>
+  <div class="divider reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 3 C 8 8, 8 16, 12 21 C 16 16, 16 8, 12 3 Z"/></svg></div>
+  <div class="palette-grid reveal">
+    <div class="palette-card">
+      <span class="swatch swatch-burgundy" aria-hidden="true"></span>
+      <div><strong>Burgundy</strong><p>#7A1F3D</p></div>
+    </div>
+    <div class="palette-card">
+      <span class="swatch swatch-cream" aria-hidden="true"></span>
+      <div><strong>Cream</strong><p>#FCF3E8</p></div>
     </div>
   </div>
 </section>
@@ -765,9 +856,114 @@
 <script>
   const envFrame = document.getElementById('envFrame');
   const envScreen = document.getElementById('envelope-screen');
+  const music = document.getElementById('backgroundMusic');
+  const musicSource = document.getElementById('musicSource');
+  const musicToggle = document.getElementById('musicToggle');
+  const musicLabel = document.getElementById('musicLabel');
+  const couplePhotoPreview = document.getElementById('couplePhotoPreview');
+  const coverContent = document.querySelector('.cover-content');
+  const starFall = document.querySelector('.star-fall');
+  const musicCandidates = ['music.mp3', 'assets/music.mp3', 'audio/music.mp3', 'sounds/music.mp3'];
+  const photoCandidates = ['couple-photo.jpg', 'couple-photo.jpg.jpeg', 'couple-photo.png', 'couple.jpg', 'couple.png', 'photo.jpg', 'photo.png', 'assets/couple-photo.jpg', 'assets/couple-photo.png'];
+
+  async function loadPreferredMusic(){
+    for (const candidate of musicCandidates) {
+      try {
+        const response = await fetch(candidate, { method: 'HEAD' });
+        if (response.ok) {
+          musicSource.src = candidate;
+          music.load();
+          return true;
+        }
+      } catch (error) {
+        // Ignore and keep the fallback source.
+      }
+    }
+    musicSource.src = 'https://rr4---sn-aigl6nzl.googlevideo.com/videoplayback?expire=1786321974&ei=1sd4atWZNZHRp-oPgOC8-Qk&ip=102.90.80.20&id=o-AMZXS61PVlATXgCnq0Q0zCcQLCxqvUE114GHzthYZD8V&itag=139&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=440&gcr=ng&bui=AZFlqhO49eJNfbEaIzsPqC8ZSBXuGImFiVSVkylqTqiVy312UO4fSxf4tqWsqn5SZAlJwetXsnbvrzM1&vprv=1&svpuc=1&mime=audio%2Fmp4&rqh=1&gir=yes&clen=987717&dur=161.667&lmt=1759470279880745&keepalive=yes&fexp=51565115&c=ANDROID_VR&txp=1432534&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cgcr%2Cbui%2Cvprv%2Csvpuc%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRAIge3GBBTz3JjoWndk6X9uzr3mkLz8PgEd_3o_a0o_5dT4CIBW5GtCW5k8Hrk0oaHv0QysBnQWhIbvs3FFSNZhClKQX&rm=sn-huoob-avn67l,sn-aige6y7z&rrc=79,104&req_id=8fec88636fe1a3ee&rms=rdu,au&redirect_counter=2&cms_redirect=yes&cmsv=e&ipbypass=yes&met=1786300400,&mh=0h&mip=105.127.12.31&mm=29&mn=sn-aigl6nzl&ms=rdu&mt=1786299903&mv=m&mvi=4&pl=24&lsparams=cps,ipbypass,met,mh,mip,mm,mn,ms,mv,mvi,pl,rms&lsig=APaTxxMwRAIgZJVnakB6D-ftlGZCGxApjCg3wiq9PL1IprU596M4EHgCIAlb4yvIfeP2p_Z-cxDM1TByoLkDk--__6disNXY9VLB';
+    music.load();
+    return false;
+  }
+
+  function setMusicButtonState(isPlaying){
+    musicToggle.classList.toggle('paused', !isPlaying);
+    musicLabel.textContent = isPlaying ? 'Music On' : 'Play Music';
+  }
+
+  function startMusic(){
+    if (!music.paused) return;
+    music.volume = 0.35;
+    music.play().catch(() => {
+      setMusicButtonState(false);
+    });
+  }
+
+  function toggleMusic(){
+    if (music.paused) {
+      startMusic();
+    } else {
+      music.pause();
+      setMusicButtonState(false);
+    }
+  }
+
+  async function setCouplePhoto(src) {
+    couplePhotoPreview.innerHTML = `<img src="${src}" alt="Couple photo">`;
+  }
+
+  function loadImageCandidate(candidate) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = candidate;
+    });
+  }
+
+  async function showDefaultPhoto() {
+    for (const candidate of photoCandidates) {
+      const found = await loadImageCandidate(candidate);
+      if (found) {
+        await setCouplePhoto(candidate);
+        return true;
+      }
+    }
+    couplePhotoPreview.innerHTML = '<div class="photo-placeholder">Place a photo file in the site folder.</div>';
+    return false;
+  }
+
+  function createGoldenStar(){
+    if (!starFall) return;
+    const span = document.createElement('span');
+    const left = Math.random() * 100;
+    const dur = 2.8 + Math.random() * 2.4;
+    const wobble = (Math.random() - 0.5) * 80;
+    span.style.left = `${left}vw`;
+    span.style.setProperty('--star-dur', `${dur}s`);
+    span.style.setProperty('--star-wobble', `${wobble}px`);
+    starFall.appendChild(span);
+    setTimeout(() => span.remove(), dur * 1000 + 200);
+  }
+
+  setInterval(createGoldenStar, 420);
+
+  musicToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleMusic();
+  });
+  music.addEventListener('play', () => setMusicButtonState(true));
+  music.addEventListener('pause', () => setMusicButtonState(false));
+  music.addEventListener('ended', () => setMusicButtonState(false));
+  loadPreferredMusic();
+  showDefaultPhoto();
+  setMusicButtonState(false);
+
   function openEnvelope(){
     if (envFrame.classList.contains('open')) return;
     envFrame.classList.add('open');
+    startMusic();
+    if (coverContent) {
+      coverContent.classList.add('photo-visible');
+    }
     setTimeout(() => {
       envScreen.classList.add('hidden');
       document.body.style.overflow = 'auto';
