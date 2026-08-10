@@ -478,14 +478,13 @@
   .section-eyebrow{ text-align:center; display:block; margin-bottom:0.9rem; }
 
   .palette-section{ text-align:center; }
-  .palette-grid{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1rem; margin-top:2rem; }
+  .palette-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; margin-top:2rem; }
   .palette-card{
     background:var(--bg-soft); border:1px solid var(--line); border-radius:12px; padding:1rem;
     box-shadow:var(--card-shadow); display:flex; align-items:center; gap:0.9rem; text-align:left;
   }
   .swatch{ width:46px; height:46px; border-radius:50%; flex-shrink:0; border:2px solid rgba(255,255,255,0.7); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); }
   .swatch-burgundy{ background:#7A1F3D; }
-  .swatch-cream{ background:#FCF3E8; }
   .swatch-rose{ background:#E9CFCF; }
   .swatch-gold{ background:#D8B178; }
   .palette-card strong{ display:block; color:var(--rose); margin-bottom:0.2rem; }
@@ -500,7 +499,7 @@
 </head>
 <body>
 <audio id="backgroundMusic" loop preload="auto">
-  <source id="musicSource" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+  <source id="musicSource" src="music.mp3" type="audio/mpeg">
 </audio>
 <div class="music-controls">
   <button class="music-toggle" id="musicToggle" type="button" aria-label="Toggle background music">
@@ -850,10 +849,6 @@
       <span class="swatch swatch-burgundy" aria-hidden="true"></span>
       <div><strong>Burgundy</strong><p>#7A1F3D</p></div>
     </div>
-    <div class="palette-card">
-      <span class="swatch swatch-cream" aria-hidden="true"></span>
-      <div><strong>Cream</strong><p>#FCF3E8</p></div>
-    </div>
   </div>
 </section>
 
@@ -872,7 +867,7 @@
   const couplePhotoPreview = document.getElementById('couplePhotoPreview');
   const coverContent = document.querySelector('.cover-content');
   const starFall = document.querySelector('.star-fall');
-  const musicCandidates = ['music.mp3', 'assets/music.mp3', 'audio/music.mp3', 'sounds/music.mp3'];
+  const musicCandidates = ['./music.mp3', 'music.mp3', 'assets/music.mp3', 'audio/music.mp3', 'sounds/music.mp3'];
   const photoCandidates = ['couple-photo.jpg.jpeg', './couple-photo.jpg.jpeg', '/couple-photo.jpg.jpeg', 'couple-photo2.jpg.jpeg', './couple-photo2.jpg.jpeg', '/couple-photo2.jpg.jpeg', 'couple-photo.jpg', 'couple-photo.png', 'couple.jpg', 'couple.png', 'photo.jpg', 'photo.png', 'assets/couple-photo.jpg', 'assets/couple-photo.png'];
   async function loadPreferredMusic(){
     for (const candidate of musicCandidates) {
@@ -900,7 +895,10 @@
   function startMusic(){
     if (!music.paused) return;
     music.volume = 0.35;
-    music.play().catch(() => {
+    music.load();
+    music.play().then(() => {
+      setMusicButtonState(true);
+    }).catch(() => {
       setMusicButtonState(false);
     });
   }
