@@ -1,31 +1,40 @@
 const path = require('path');
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@libsql/client');
 const dotenv = require('dotenv');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'rsvp.db');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
-const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) {
-    console.error('Unable to open RSVP database:', err.message);
-    process.exit(1);
-  }
+// --- Turso (libSQL) database setup ---
+// Replaces the old local sqlite3 file, which was wiped every time Render's
+// free-tier container restarted. Turso is a hosted SQLite-compatible
+// database, so the queries below are almost identical to before — the data
+// now just lives outside the container and survives restarts/redeploys.
+if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+  console.error(
+    'Missing TURSO_DATABASE_URL or TURSO_AUTH_TOKEN environment variables. ' +
+    'RSVP storage will not work until these are set.'
+  );
+}
+
+const db = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-db.serialize(() => {
-  db.run(`
+async function initDb() {
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS rsvp_submissions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      email TEXT NOT NULL,
+      email TEXT,
       attending TEXT NOT NULL,
       guest_count INTEGER,
       meal_pref TEXT,
@@ -34,26 +43,29 @@ db.serialize(() => {
     )
   `);
 
-  db.run(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS admin_settings (
       key TEXT PRIMARY KEY,
       value TEXT
     )
   `);
 
-  db.all(`PRAGMA table_info(rsvp_submissions)`, (err, columns) => {
-    if (err) {
-      console.error('Unable to inspect RSVP table schema:', err.message);
-      return;
-    }
-
-    const hasEmail = columns.some((column) => column.name === 'email');
+  // Safety net: add the email column if an older version of the table
+  // exists without it (mirrors the old sqlite3 migration logic).
+  try {
+    const columns = await db.execute(`PRAGMA table_info(rsvp_submissions)`);
+    const hasEmail = columns.rows.some((column) => column.name === 'email');
     if (!hasEmail) {
-      db.run(`ALTER TABLE rsvp_submissions ADD COLUMN email TEXT`, (alterErr) => {
-        if (alterErr) console.error('Failed to add email column to RSVP table:', alterErr.message);
-      });
+      await db.execute(`ALTER TABLE rsvp_submissions ADD COLUMN email TEXT`);
     }
-  });
+  } catch (err) {
+    console.error('Unable to inspect/migrate RSVP table schema:', err.message);
+  }
+}
+
+initDb().catch((err) => {
+  console.error('Unable to initialize Turso database:', err.message);
+  process.exit(1);
 });
 
 const defaultAdminEmails = process.env.ADMIN_EMAILS
@@ -112,27 +124,20 @@ function normalizeEmails(input) {
     .filter((email) => isValidEmail(email));
 }
 
-function dbGet(key) {
-  return new Promise((resolve, reject) => {
-    db.get('SELECT value FROM admin_settings WHERE key = ?', [key], (err, row) => {
-      if (err) return reject(err);
-      resolve(row ? row.value : null);
-    });
+async function dbGet(key) {
+  const result = await db.execute({
+    sql: 'SELECT value FROM admin_settings WHERE key = ?',
+    args: [key],
   });
+  return result.rows.length ? result.rows[0].value : null;
 }
 
-function dbSet(key, value) {
-  return new Promise((resolve, reject) => {
-    db.run(
-      `INSERT INTO admin_settings (key, value)
-       VALUES (?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-      [key, value],
-      function (err) {
-        if (err) return reject(err);
-        resolve();
-      }
-    );
+async function dbSet(key, value) {
+  await db.execute({
+    sql: `INSERT INTO admin_settings (key, value)
+          VALUES (?, ?)
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    args: [key, value],
   });
 }
 
@@ -247,29 +252,36 @@ app.post('/api/rsvp', async (req, res) => {
     received_at: new Date().toISOString(),
   };
 
-  db.run(
-    `INSERT INTO rsvp_submissions (name, email, attending, guest_count, meal_pref, message, received_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [submission.name, submission.email, submission.attending, submission.guest_count, submission.meal_pref, submission.message, submission.received_at],
-    async function (err) {
-      if (err) {
-        console.error('Failed to save RSVP:', err);
-        return res.status(500).json({ error: 'Unable to save RSVP at this time.' });
-      }
+  try {
+    await db.execute({
+      sql: `INSERT INTO rsvp_submissions (name, email, attending, guest_count, meal_pref, message, received_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        submission.name,
+        submission.email,
+        submission.attending,
+        submission.guest_count,
+        submission.meal_pref,
+        submission.message,
+        submission.received_at,
+      ],
+    });
+  } catch (err) {
+    console.error('Failed to save RSVP:', err);
+    return res.status(500).json({ error: 'Unable to save RSVP at this time.' });
+  }
 
-      try {
-        await notifyAdmins(submission);
-        await notifyGuest(submission);
-        res.json({ success: true });
-      } catch (notifyError) {
-        console.error('Failed to send notification:', notifyError);
-        // The RSVP itself was already saved successfully at this point —
-        // only the email failed, so we still tell the guest it worked but
-        // flag the email issue so the admin notices it in the logs.
-        res.json({ success: true, emailWarning: 'RSVP saved, but the notification email could not be sent.' });
-      }
-    }
-  );
+  try {
+    await notifyAdmins(submission);
+    await notifyGuest(submission);
+    res.json({ success: true });
+  } catch (notifyError) {
+    console.error('Failed to send notification:', notifyError);
+    // The RSVP itself was already saved successfully at this point —
+    // only the email failed, so we still tell the guest it worked but
+    // flag the email issue so the admin notices it in the logs.
+    res.json({ success: true, emailWarning: 'RSVP saved, but the notification email could not be sent.' });
+  }
 });
 
 app.get('/api/admin/emails', requireAdminAuth, async (req, res) => {
@@ -299,64 +311,70 @@ app.post('/api/admin/emails', requireAdminAuth, async (req, res) => {
 });
 
 // Export all RSVPs as a CSV or JSON backup file.
-app.get('/api/admin/export', requireAdminAuth, (req, res) => {
+app.get('/api/admin/export', requireAdminAuth, async (req, res) => {
   const format = (req.query.format || 'csv').toLowerCase();
 
-  db.all(
-    `SELECT id, name, email, attending, guest_count, meal_pref, message, received_at
-     FROM rsvp_submissions ORDER BY id ASC`,
-    (err, rows) => {
-      if (err) {
-        console.error('Failed to export RSVPs:', err);
-        return res.status(500).json({ error: 'Unable to export RSVPs.' });
-      }
+  try {
+    const result = await db.execute(
+      `SELECT id, name, email, attending, guest_count, meal_pref, message, received_at
+       FROM rsvp_submissions ORDER BY id ASC`
+    );
+    const rows = result.rows;
 
-      if (format === 'json') {
-        res.setHeader('Content-Disposition', 'attachment; filename="rsvp-backup.json"');
-        return res.json(rows);
-      }
-
-      const headers = ['id', 'name', 'email', 'attending', 'guest_count', 'meal_pref', 'message', 'received_at'];
-      const escapeCsv = (val) => {
-        const str = val === null || val === undefined ? '' : String(val);
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-          return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
-      };
-
-      const csvRows = [
-        headers.join(','),
-        ...rows.map((row) => headers.map((h) => escapeCsv(row[h])).join(',')),
-      ];
-
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename="rsvp-backup.csv"');
-      res.send(csvRows.join('\n'));
+    if (format === 'json') {
+      res.setHeader('Content-Disposition', 'attachment; filename="rsvp-backup.json"');
+      return res.json(rows);
     }
-  );
+
+    const headers = ['id', 'name', 'email', 'attending', 'guest_count', 'meal_pref', 'message', 'received_at'];
+    const escapeCsv = (val) => {
+      const str = val === null || val === undefined ? '' : String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvRows = [
+      headers.join(','),
+      ...rows.map((row) => headers.map((h) => escapeCsv(row[h])).join(',')),
+    ];
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="rsvp-backup.csv"');
+    res.send(csvRows.join('\n'));
+  } catch (err) {
+    console.error('Failed to export RSVPs:', err);
+    res.status(500).json({ error: 'Unable to export RSVPs.' });
+  }
 });
 
 // Delete a single RSVP by id (e.g. to remove test entries).
-app.delete('/api/admin/rsvp/:id', requireAdminAuth, (req, res) => {
+app.delete('/api/admin/rsvp/:id', requireAdminAuth, async (req, res) => {
   const { id } = req.params;
-  db.run('DELETE FROM rsvp_submissions WHERE id = ?', [id], function (err) {
-    if (err) {
-      console.error('Failed to delete RSVP:', err);
-      return res.status(500).json({ error: 'Unable to delete RSVP.' });
-    }
-    res.json({ success: true, deleted: this.changes });
-  });
+  try {
+    const result = await db.execute({
+      sql: 'DELETE FROM rsvp_submissions WHERE id = ?',
+      args: [id],
+    });
+    res.json({ success: true, deleted: result.rowsAffected });
+  } catch (err) {
+    console.error('Failed to delete RSVP:', err);
+    res.status(500).json({ error: 'Unable to delete RSVP.' });
+  }
 });
 
-app.get('/api/rsvps', requireAdminAuth, (req, res) => {
-  db.all(`SELECT id, name, email, attending, guest_count, meal_pref, message, received_at FROM rsvp_submissions ORDER BY id DESC`, (err, rows) => {
-    if (err) {
-      console.error('Failed to fetch RSVP submissions:', err);
-      return res.status(500).json({ error: 'Unable to load RSVP submissions.' });
-    }
-    res.json(rows);
-  });
+app.get('/api/rsvps', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await db.execute(
+      `SELECT id, name, email, attending, guest_count, meal_pref, message, received_at
+       FROM rsvp_submissions ORDER BY id DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Failed to fetch RSVP submissions:', err);
+    res.status(500).json({ error: 'Unable to load RSVP submissions.' });
+  }
 });
 
 app.get('/api/health', (req, res) => {
@@ -370,5 +388,8 @@ app.listen(PORT, () => {
   }
   if (!process.env.ADMIN_USER || !process.env.ADMIN_PASSWORD) {
     console.warn('Admin routes are unprotected until ADMIN_USER and ADMIN_PASSWORD are configured.');
+  }
+  if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+    console.warn('RSVP storage disabled until TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are configured.');
   }
 });

@@ -12,10 +12,10 @@
     "deploy:link": "npm run deploy && npm run save-link"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "dotenv": "^16.1.4",
     "express": "^4.18.4",
-    "nodemailer": "^6.9.5",
-    "sqlite3": "^5.1.6"
+    "nodemailer": "^6.9.5"
   },
   "devDependencies": {
     "gh-pages": "^5.0.0",
